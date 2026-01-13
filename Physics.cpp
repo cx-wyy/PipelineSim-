@@ -10,11 +10,14 @@ double Physics::alpha_computed = 0.0;
 double Physics::ASTM_A = 0.0;
 double Physics::ASTM_B = 0.0;
 
-void Physics::initProperties(double rho_init_kgm3, double P_init_Pa, double T_init_C) {
+void Physics::initProperties(double rho_init_kgm3, double P_init_MPa, double T_init_C) {
     std::cout << "--- API 11.1 Initialization Start ---" << std::endl;
 
     double T_F = T_init_C * 1.8 + 32.0;
-    double P_psig = P_init_Pa * 145.038 * 1e-6;
+
+    // 输入 P 为 MPa，转换为 psi 用于计算 (1 MPa = 145.038 psi)
+    double P_psig = P_init_MPa * 145.038;
+
     if (P_psig < 0) P_psig = 0;
 
     double A = -1.99470;
@@ -79,28 +82,19 @@ void Physics::initProperties(double rho_init_kgm3, double P_init_Pa, double T_in
 }
 
 void Physics::initViscosity(double T1_C, double v1_cSt, double T2_C, double v2_cSt) {
-    // 转换温度为开尔文
     double T1_K = T1_C + T_Kelvin;
     double T2_K = T2_C + T_Kelvin;
 
-    // Z = v + 0.7 (近似公式， v > 2 cSt)
     double Z1 = v1_cSt + 0.7;
     double Z2 = v2_cSt + 0.7;
-
-    // 构建方程组:
-    // lg(lg(Z1)) = A - B * lg(T1)
-    // lg(lg(Z2)) = A - B * lg(T2)
 
     double Y1 = std::log10(std::log10(Z1));
     double Y2 = std::log10(std::log10(Z2));
     double X1 = std::log10(T1_K);
     double X2 = std::log10(T2_K);
 
-    // 求解斜率 -B
     double slope = (Y2 - Y1) / (X2 - X1);
     ASTM_B = -slope;
-
-    // 求解截距 A = Y + B*X
     ASTM_A = Y1 + ASTM_B * X1;
 
     std::cout << "--- Viscosity Parameters (ASTM D341) ---" << std::endl;
@@ -110,25 +104,22 @@ void Physics::initViscosity(double T1_C, double v1_cSt, double T2_C, double v2_c
 double Physics::getViscosity(double T_C) {
     double T_K = T_C + T_Kelvin;
 
-    // lg(lg(Z)) = A - B * lg(T)
     double log_T = std::log10(T_K);
     double log_log_Z = ASTM_A - ASTM_B * log_T;
 
     double log_Z = std::pow(10.0, log_log_Z);
     double Z = std::pow(10.0, log_Z);
 
-    // Z = v + 0.7 => v = Z - 0.7 (cSt)
     double v_cSt = Z - 0.7;
-
-    // 安全检查
     if (v_cSt < 1e-6) v_cSt = 1e-6;
 
-    // 转换为 m^2/s (1 cSt = 1e-6 m^2/s)
     return v_cSt * 1.0e-6;
 }
 
-double Physics::getDensity(double P_Pa, double T_C) {
-    double P_gauge_Pa = P_Pa - P_std_Pa;
+double Physics::getDensity(double P_MPa, double T_C) {
+    //将 MPa 转换为 Pa 计算密度修正量 (内部公式需要Pa或psi)
+    double P_gauge_Pa = (P_MPa * 1.0e6) - P_std_Pa;
+
     double term_T = alpha_computed * (T_C - T_std_C);
     double term_P = P_gauge_Pa / B_T_computed;
     double exponent = -term_T + term_P;
@@ -145,10 +136,6 @@ double Physics::getWaveSpeed(double rho) {
 }
 
 double Physics::getFrictionFactor(double V, double D, double rho, double mu_visc) {
-    // mu_visc 在这里输入是 动力粘度 Pa.s = rho * 运动粘度
-    // 或者我们修改接口只传运动粘度? 为了兼容Colebrook公式，这里认为传入的是动力粘度
-    // 如果传入的是动力粘度，Re = rho * V * D / mu
-
     if (std::abs(V) < 1e-6) return 0.02;
     double Re = (rho * std::abs(V) * D) / mu_visc;
 

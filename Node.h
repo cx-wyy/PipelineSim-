@@ -4,11 +4,11 @@
 struct Node {
     double x;       // 距离 (m)
     double z;       // 高程 (m)
-    double P;       // 压力 (Pa)
+    double P;       // 压力 (MPa)
     double V;       // 流速 (m/s)
-    double T;       // 温度 (deg C) - 绝对温度需在计算时转换
+    double T;       // 温度 (deg C)
     double rho;     // 密度 (kg/m^3)
-    double visc;    // 运动粘度 (m^2/s) - 用于记录和输出
+    double visc;    // 运动粘度 (m^2/s)
 
     // 用于存储上一时间步的结果
     double P_old;

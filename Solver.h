@@ -2,12 +2,12 @@
 #define SOLVER_H
 
 #include <vector>
-#include <string>  
+#include <string>
 #include "Node.h"
 
 class Solver {
 public:
-    // 增加 inletT 参数
+    // P 单位为 MPa
     Solver(int numNodes, double length, double inletP, double outletP, double inletT);
 
     void initialize();
@@ -18,15 +18,14 @@ private:
     int N;
     double L;
     double dx;
-    double inletPressure;
-    double outletPressure;
-    double inletTemp; // 新增：入口温度
+    double inletPressure; // MPa
+    double outletPressure; // MPa
+    double inletTemp;
 
-    const double theta = 0.55; // Preissmann 权重
+    const double theta = 0.55;
 
     std::vector<Node> nodes;
 
-    // 构建并求解线性方程组 (Ax = b)，矩阵大小为 3N
     void solveStep(double dt);
     void gaussianElimination(std::vector<std::vector<double>>& A, std::vector<double>& b, std::vector<double>& result);
 };
